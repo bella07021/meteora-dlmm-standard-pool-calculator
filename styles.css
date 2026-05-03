@@ -1,1 +1,413 @@
 
+:root {
+  --bg: #0f1117;
+  --panel: #191b24;
+  --panel-2: #202332;
+  --text: #f5f7fb;
+  --muted: #9ca3b6;
+  --line: #313548;
+  --accent: #38bdf8;
+  --accent-2: #ffffff;
+  --good: #2dd4bf;
+  --bad: #fb7185;
+  --warn: #fbbf24;
+  --shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(56, 189, 248, 0.14), transparent 28rem),
+    linear-gradient(145deg, #11131b 0%, #0d0f14 48%, #15151f 100%);
+  color: var(--text);
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  min-height: 100vh;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.app-shell {
+  width: min(1440px, calc(100vw - 40px));
+  margin: 0 auto;
+  padding: 28px 0 40px;
+  display: grid;
+  gap: 16px;
+}
+
+.panel,
+.chart-wrap {
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: var(--shadow);
+}
+
+.panel {
+  border-radius: 8px;
+}
+
+.controls {
+  padding: 22px;
+}
+
+.title-block {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: clamp(24px, 3vw, 42px);
+  line-height: 1.05;
+}
+
+h2 {
+  font-size: 20px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.step-title {
+  margin: 18px 0 10px;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+label {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+label span {
+  color: #d7dbea;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+label small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+input {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel-2);
+  color: var(--text);
+  padding: 0 12px;
+  outline: none;
+}
+
+input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.18);
+}
+
+.segmented {
+  display: inline-grid;
+  grid-auto-flow: column;
+  gap: 4px;
+  margin-top: 16px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #12141d;
+}
+
+.segment,
+.unit {
+  height: 34px;
+  border: 0;
+  border-radius: 6px;
+  padding: 0 14px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.segment.active,
+.unit.active {
+  color: var(--text);
+  background: #2a2e41;
+}
+
+.scenario {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.scenario label {
+  width: min(360px, 100%);
+}
+
+.compact {
+  margin-top: 0;
+}
+
+.primary-action {
+  height: 38px;
+  margin: 16px 0 0 12px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #071018;
+  padding: 0 16px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.liquidity-table-wrap {
+  margin-top: 14px;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.liquidity-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 780px;
+}
+
+.liquidity-table th,
+.liquidity-table td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 10px 12px;
+  text-align: left;
+  color: #d7dbea;
+  font-size: 13px;
+}
+
+.liquidity-table th {
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.025);
+  font-size: 12px;
+}
+
+.liquidity-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.remove-row {
+  height: 28px;
+  border: 1px solid rgba(251, 113, 133, 0.35);
+  border-radius: 6px;
+  background: rgba(251, 113, 133, 0.12);
+  color: #fecdd3;
+  cursor: pointer;
+}
+
+.result-strip,
+.details {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  overflow: hidden;
+}
+
+.details {
+  grid-template-columns: repeat(6, 1fr);
+}
+
+.result-strip > div,
+.details > div {
+  background: rgba(255, 255, 255, 0.025);
+  padding: 16px 18px;
+  display: grid;
+  gap: 5px;
+}
+
+.result-strip span,
+.details span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.result-strip small,
+.details small {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.result-strip strong,
+.details strong {
+  font-size: 18px;
+  overflow-wrap: anywhere;
+}
+
+.chart-wrap {
+  border-radius: 8px;
+  padding: 18px;
+}
+
+.chart-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 12px;
+}
+
+.chart-head p {
+  color: var(--muted);
+  margin-top: 5px;
+  font-size: 14px;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.price-dot {
+  background: var(--accent);
+}
+
+.sell-dot {
+  background: var(--bad);
+}
+
+.flow-dot {
+  background: var(--accent-2);
+}
+
+.canvas-shell {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  min-height: 360px;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 6px;
+  background: #090b10;
+}
+
+.tooltip {
+  position: absolute;
+  z-index: 4;
+  width: max-content;
+  max-width: 280px;
+  pointer-events: none;
+  transform: translate(14px, 14px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(18, 20, 29, 0.96);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+  padding: 12px;
+  font-size: 13px;
+}
+
+.tooltip strong {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 15px;
+}
+
+.tooltip dl {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 5px 14px;
+  margin: 0;
+}
+
+.tooltip dt {
+  color: var(--muted);
+}
+
+.tooltip dd {
+  margin: 0;
+  text-align: right;
+}
+
+@media (max-width: 980px) {
+  .grid,
+  .result-strip,
+  .details {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .chart-head,
+  .title-block {
+    display: grid;
+  }
+}
+
+@media (max-width: 620px) {
+  .app-shell {
+    width: min(100vw - 24px, 1440px);
+    padding-top: 12px;
+  }
+
+  .grid,
+  .result-strip,
+  .details {
+    grid-template-columns: 1fr;
+  }
+
+  .scenario {
+    display: grid;
+  }
+
+  .canvas-shell {
+    min-height: 420px;
+  }
+}
