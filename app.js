@@ -1,4 +1,3 @@
-
 const $ = (id) => document.getElementById(id);
 
 const inputs = {
@@ -61,23 +60,58 @@ function globalParams() {
   };
 }
 
-function binsForRange(p, minPrice, maxPrice) {
+function offsetUp(p, price) {
+  return Math.ceil(Math.log(price / p.initialPrice) / Math.log(p.ratio));
+}
+
+function offsetDown(p, price) {
+  return -Math.ceil(Math.log(p.initialPrice / price) / Math.log(p.ratio));
+}
+
+function rangeForPrices(p, minPrice, maxPrice) {
   const min = Math.max(minPrice, 1e-12);
   const max = Math.max(maxPrice, 1e-12);
+  const low = Math.min(min, max);
+  const high = Math.max(min, max);
+  const minOffset = low < p.initialPrice ? offsetDown(p, low) : offsetUp(p, low);
+  const maxOffset = high < p.initialPrice ? offsetDown(p, high) : offsetUp(p, high);
+  const bidStart = Math.min(minOffset, -1);
+  const bidEnd = Math.min(maxOffset, -1);
+  const askStart = Math.max(minOffset, 1);
+  const askEnd = Math.max(maxOffset, 1);
+  const bidBins = bidStart <= bidEnd && minOffset < 0 ? bidEnd - bidStart + 1 : 0;
+  const askBins = askStart <= askEnd && maxOffset > 0 ? askEnd - askStart + 1 : 0;
+
   return {
-    bidBins: min < p.initialPrice ? Math.ceil(Math.log(p.initialPrice / min) / Math.log(p.ratio)) : 0,
-    askBins: max > p.initialPrice ? Math.ceil(Math.log(max / p.initialPrice) / Math.log(p.ratio)) : 0,
+    minOffset,
+    maxOffset,
+    bidStart,
+    bidEnd,
+    askStart,
+    askEnd,
+    bidBins,
+    askBins,
+    totalBins: Math.max(0, maxOffset - minOffset + 1),
   };
 }
 
-function weight(mode, offset, bidBins, askBins) {
+function binsForRange(p, minPrice, maxPrice) {
+  const range = rangeForPrices(p, minPrice, maxPrice);
+  return {
+    bidBins: range.bidBins,
+    askBins: range.askBins,
+    totalBins: range.totalBins,
+  };
+}
+
+function weight(mode, offset, range) {
   if (mode === "spot") return 1;
   if (mode === "curve") {
     if (offset < 0) {
-      return bidBins - Math.abs(offset) + 1;
+      return offset - range.bidStart + 1;
     }
     if (offset > 0) {
-      return askBins - offset + 1;
+      return range.askEnd - offset + 1;
     }
     return 1;
   }
@@ -86,10 +120,10 @@ function weight(mode, offset, bidBins, askBins) {
   return 1;
 }
 
-function weightSum(mode, side, count, bidBins, askBins) {
+function weightSum(mode, offsets, range) {
   let total = 0;
-  for (let n = 1; n <= count; n += 1) {
-    total += weight(mode, side === "bid" ? -n : n, bidBins, askBins);
+  for (const offset of offsets) {
+    total += weight(mode, offset, range);
   }
   return total;
 }
@@ -125,12 +159,26 @@ function addToPoint(map, p, offset, patch) {
 }
 
 function buildLayerPoints(p, config, map) {
-  const { bidBins, askBins } = binsForRange(p, config.minPrice, config.maxPrice);
-  const bidDenom = weightSum(config.mode, "bid", bidBins, bidBins, askBins);
+  const range = rangeForPrices(p, config.minPrice, config.maxPrice);
+  const bidOffsets = [];
+  const askOffsets = [];
 
-  for (let n = bidBins; n >= 1; n -= 1) {
-    const quoteInBin = bidDenom > 0 ? config.quoteAmount * weight(config.mode, -n, bidBins, askBins) / bidDenom : 0;
-    addToPoint(map, p, -n, {
+  if (range.bidBins > 0) {
+    for (let offset = range.bidStart; offset <= range.bidEnd; offset += 1) {
+      bidOffsets.push(offset);
+    }
+  }
+  if (range.askBins > 0) {
+    for (let offset = range.askStart; offset <= range.askEnd; offset += 1) {
+      askOffsets.push(offset);
+    }
+  }
+
+  const bidDenom = weightSum(config.mode, bidOffsets, range);
+
+  for (const offset of bidOffsets) {
+    const quoteInBin = bidDenom > 0 ? config.quoteAmount * weight(config.mode, offset, range) / bidDenom : 0;
+    addToPoint(map, p, offset, {
       binFlow: -quoteInBin,
       tokenAmount: quoteInBin,
       quoteValue: quoteInBin,
@@ -139,15 +187,15 @@ function buildLayerPoints(p, config, map) {
   }
 
   let askDenom = 0;
-  for (let n = 1; n <= askBins; n += 1) {
-    askDenom += weight(config.mode, n, bidBins, askBins) / priceAt(p, n);
+  for (const offset of askOffsets) {
+    askDenom += weight(config.mode, offset, range) / priceAt(p, offset);
   }
-  for (let n = 1; n <= askBins; n += 1) {
-    const price = priceAt(p, n);
-    const baseInBin = askDenom > 0 ? config.baseAmount * (weight(config.mode, n, bidBins, askBins) / price) / askDenom : 0;
+  for (const offset of askOffsets) {
+    const price = priceAt(p, offset);
+    const baseInBin = askDenom > 0 ? config.baseAmount * (weight(config.mode, offset, range) / price) / askDenom : 0;
     const quoteValue = baseInBin * price;
     const fee = quoteValue * p.feeBps / 10000;
-    addToPoint(map, p, n, {
+    addToPoint(map, p, offset, {
       binFlow: quoteValue,
       tokenAmount: baseInBin,
       quoteValue,
@@ -158,19 +206,19 @@ function buildLayerPoints(p, config, map) {
 }
 
 function buildPoints(p) {
-  const ranges = liquidityConfigs.map((config) => binsForRange(p, config.minPrice, config.maxPrice));
-  const bidMax = Math.max(0, ...ranges.map((r) => r.bidBins));
-  const askMax = Math.max(0, ...ranges.map((r) => r.askBins));
+  const ranges = liquidityConfigs.map((config) => rangeForPrices(p, config.minPrice, config.maxPrice));
+  const minOffset = Math.min(0, ...ranges.map((r) => r.minOffset));
+  const maxOffset = Math.max(0, ...ranges.map((r) => r.maxOffset));
   const map = new Map();
 
-  for (let offset = -bidMax; offset <= askMax; offset += 1) {
+  for (let offset = minOffset; offset <= maxOffset; offset += 1) {
     map.set(offset, emptyPoint(p, offset));
   }
   liquidityConfigs.forEach((config) => buildLayerPoints(p, config, map));
 
   const out = [...map.values()].sort((a, b) => a.offset - b.offset);
   let runningSell = 0;
-  for (let offset = -1; offset >= -bidMax; offset -= 1) {
+  for (let offset = -1; offset >= minOffset; offset -= 1) {
     const point = map.get(offset);
     if (point) {
       runningSell += point.binFlow;
@@ -178,7 +226,7 @@ function buildPoints(p) {
     }
   }
   let runningBuy = 0;
-  for (let offset = 1; offset <= askMax; offset += 1) {
+  for (let offset = 1; offset <= maxOffset; offset += 1) {
     const point = map.get(offset);
     if (point) {
       runningBuy += point.quoteValue;
@@ -437,7 +485,7 @@ function showTooltip(point, event, p) {
 function renderLiquidityRows(p) {
   const tbody = $("liquidityRows");
   tbody.innerHTML = liquidityConfigs.map((config, index) => {
-    const { bidBins, askBins } = binsForRange(p, config.minPrice, config.maxPrice);
+    const { totalBins } = binsForRange(p, config.minPrice, config.maxPrice);
     return `
       <tr>
         <td>${index + 1}</td>
@@ -446,7 +494,7 @@ function renderLiquidityRows(p) {
         <td>${fmtToken(config.quoteAmount, p.quoteSymbol)}</td>
         <td>${fmtPrice(config.minPrice)}</td>
         <td>${fmtPrice(config.maxPrice)}</td>
-        <td>${bidBins + askBins + 1}</td>
+        <td>${totalBins}</td>
         <td><button class="remove-row" data-id="${config.id}" type="button">Remove</button></td>
       </tr>
     `;
