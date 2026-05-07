@@ -105,49 +105,62 @@
             <h2>交易模拟</h2>
             <p>基于上方已添加的整体流动性，从当前价格推目标价，或从目标价反推需要的资金。</p>
           </div>
-          <div class="segmented compact" role="radiogroup" aria-label="模拟方式">
-            <button class="sim-mode active" data-sim-mode="amount" type="button">资金 → 价格</button>
-            <button class="sim-mode" data-sim-mode="target" type="button">价格 → 资金</button>
-          </div>
         </div>
 
-        <div class="sim-grid">
-          <label>
-            <span>当前价格</span>
-            <input id="scenarioCurrentPrice" type="number" step="0.000000001" value="0.1" />
-            <small id="scenarioCurrentHint">U / FAIRA</small>
-          </label>
-          <div class="field-with-control">
-            <span>价格单位</span>
-            <div class="segmented compact" role="radiogroup" aria-label="当前价格单位">
-              <button class="price-unit active" data-price-unit="usd" type="button">U</button>
-              <button class="price-unit" data-price-unit="quote" type="button" id="priceQuoteUnitLabel">QUOTE</button>
+        <div class="sim-layout">
+          <div class="sim-row sim-row-top">
+            <div class="sim-cell sim-cell-mode">
+              <div class="segmented compact" role="radiogroup" aria-label="模拟方式">
+                <button class="sim-mode active" data-sim-mode="amount" type="button">资金 → 价格</button>
+                <button class="sim-mode" data-sim-mode="target" type="button">价格 → 资金</button>
+              </div>
             </div>
           </div>
-          <div class="field-with-control amount-mode-field">
-            <span>方向</span>
-            <div class="segmented compact" role="radiogroup" aria-label="交易方向">
-              <button class="trade-side active" data-side="buy" type="button">流入买入</button>
-              <button class="trade-side" data-side="sell" type="button">流出卖出</button>
+
+          <div class="sim-row sim-row-middle">
+            <label class="sim-cell sim-cell-price">
+              <span>当前价格</span>
+              <input id="scenarioCurrentPrice" type="number" step="0.000000001" value="0.1" />
+              <small id="scenarioCurrentHint">U / FAIRA</small>
+            </label>
+            <div class="field-with-control sim-cell sim-cell-price-unit">
+              <span>价格单位</span>
+              <div class="segmented compact" role="radiogroup" aria-label="当前价格单位">
+                <button class="price-unit active" data-price-unit="usd" type="button">U</button>
+                <button class="price-unit" data-price-unit="quote" type="button" id="priceQuoteUnitLabel">QUOTE</button>
+              </div>
             </div>
           </div>
-          <label class="amount-mode-field">
-            <span id="scenarioAmountLabel">流入资金</span>
-            <input id="scenarioAmount" type="number" step="100" value="50000" />
-            <small id="scenarioAmountHint">U 或 Quote</small>
-          </label>
-          <div class="field-with-control amount-mode-field" id="scenarioAmountUnitWrap">
-            <span>资金单位</span>
-            <div class="segmented compact" role="radiogroup" aria-label="资金单位">
-              <button class="amount-unit active" data-amount-unit="usd" type="button">U</button>
-              <button class="amount-unit" data-amount-unit="quote" type="button" id="amountQuoteUnitLabel">QUOTE</button>
+
+          <div class="sim-row sim-row-amount amount-mode-field">
+            <div class="field-with-control sim-cell sim-cell-side">
+              <span>方向</span>
+              <div class="segmented compact" role="radiogroup" aria-label="交易方向">
+                <button class="trade-side active" data-side="buy" type="button">流入买入</button>
+                <button class="trade-side" data-side="sell" type="button">流出卖出</button>
+              </div>
+            </div>
+            <label class="sim-cell sim-cell-amount">
+              <span id="scenarioAmountLabel">流入资金</span>
+              <input id="scenarioAmount" type="number" step="100" value="50000" />
+              <small id="scenarioAmountHint">U 或 Quote</small>
+            </label>
+            <div class="field-with-control sim-cell sim-cell-amount-unit" id="scenarioAmountUnitWrap">
+              <span>资金单位</span>
+              <div class="segmented compact" role="radiogroup" aria-label="资金单位">
+                <button class="amount-unit active" data-amount-unit="usd" type="button">U</button>
+                <button class="amount-unit" data-amount-unit="quote" type="button" id="amountQuoteUnitLabel">QUOTE</button>
+              </div>
             </div>
           </div>
-          <label class="target-mode-field" hidden>
-            <span>目标价</span>
-            <input id="scenarioTargetPrice" type="number" step="0.000000001" value="0.15" />
-            <small id="scenarioTargetHint">U / FAIRA</small>
-          </label>
+
+          <div class="sim-row sim-row-target target-mode-field" hidden>
+            <label class="sim-cell sim-cell-target">
+              <span>目标价</span>
+              <input id="scenarioTargetPrice" type="number" step="0.000000001" value="0.15" />
+              <small id="scenarioTargetHint">U / FAIRA</small>
+            </label>
+          </div>
         </div>
       </section>
 

@@ -118,11 +118,40 @@ h2 {
   gap: 12px;
 }
 
-.sim-grid {
+.sim-layout {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.sim-row {
+  display: grid;
   gap: 12px;
   align-items: end;
+}
+
+.sim-row-top {
+  grid-template-columns: minmax(360px, 520px);
+}
+
+.sim-row-middle {
+  grid-template-columns: minmax(320px, 1.2fr) minmax(260px, 0.8fr);
+}
+
+.sim-row-amount {
+  grid-template-columns: minmax(220px, 0.9fr) minmax(260px, 1.1fr) minmax(220px, 0.8fr);
+}
+
+.sim-row-target {
+  grid-template-columns: minmax(320px, 520px);
+}
+
+.sim-cell {
+  min-width: 0;
+}
+
+.sim-cell .segmented,
+.sim-cell-mode .segmented {
+  width: 100%;
 }
 
 .step-title {
@@ -430,10 +459,16 @@ canvas {
 
 @media (max-width: 980px) {
   .grid,
-  .sim-grid,
   .result-strip,
   .details {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sim-row-top,
+  .sim-row-middle,
+  .sim-row-amount,
+  .sim-row-target {
+    grid-template-columns: 1fr;
   }
 
   .chart-head,
@@ -450,7 +485,6 @@ canvas {
   }
 
   .grid,
-  .sim-grid,
   .result-strip,
   .details {
     grid-template-columns: 1fr;
