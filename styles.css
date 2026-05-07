@@ -18,6 +18,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   background:
@@ -116,7 +120,7 @@ h2 {
 
 .sim-grid {
   display: grid;
-  grid-template-columns: 1.15fr 0.85fr 0.9fr 1.15fr 0.9fr;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
   align-items: end;
 }
@@ -309,6 +313,14 @@ input:focus {
 .details strong {
   font-size: 18px;
   overflow-wrap: anywhere;
+}
+
+.result-up {
+  color: var(--good) !important;
+}
+
+.result-down {
+  color: var(--bad) !important;
 }
 
 .chart-wrap {

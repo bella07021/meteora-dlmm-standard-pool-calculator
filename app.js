@@ -341,6 +341,12 @@ function updateSimulatorControls(p) {
   $("amountQuoteUnitLabel").textContent = p.quoteSymbol;
 }
 
+function setResultTone(element, direction) {
+  element.classList.remove("result-up", "result-down");
+  if (direction > 0) element.classList.add("result-up");
+  if (direction < 0) element.classList.add("result-down");
+}
+
 function updateScenario(p) {
   updateSimulatorControls(p);
   const currentInputPrice = Math.max(num(inputs.scenarioCurrentPrice, p.initialPrice * p.quoteUsd), 1e-12);
@@ -387,6 +393,9 @@ function updateScenario(p) {
   $("scenarioMultiple").textContent = `${(targetPoint.price / currentPoint.price).toLocaleString(undefined, { maximumFractionDigits: 2 })}x`;
   $("derivedBidBins").textContent = String(Math.max(0, -points[0].offset));
   $("derivedAskBins").textContent = String(Math.max(0, points.at(-1).offset));
+  setResultTone($("scenarioPrice"), targetPoint.price - currentPoint.price);
+  setResultTone($("scenarioPriceUsd"), targetPoint.price - currentPoint.price);
+  setResultTone($("scenarioFlow"), tradeSide === "buy" ? quoteFlow : -baseFlow);
   hoverPoint = targetPoint;
 }
 
