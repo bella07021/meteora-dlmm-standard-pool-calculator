@@ -11,7 +11,9 @@ const inputs = {
   quoteBid: $("quoteBid"),
   minPrice: $("minPrice"),
   maxPrice: $("maxPrice"),
+  scenarioCurrentPrice: $("scenarioCurrentPrice"),
   scenarioAmount: $("scenarioAmount"),
+  scenarioTargetPrice: $("scenarioTargetPrice"),
 };
 
 const chart = $("chart");
@@ -19,7 +21,10 @@ const ctx = chart.getContext("2d");
 const tooltip = $("tooltip");
 
 let selectedMode = "bidAsk";
-let scenarioUnit = "usd";
+let simulationMode = "amount";
+let tradeSide = "buy";
+let priceUnit = "usd";
+let amountUnit = "usd";
 let points = [];
 let hoverPoint = null;
 let liquidityConfigs = [
@@ -141,9 +146,11 @@ function emptyPoint(p, offset) {
     tokenAmount: 0,
     tokenSymbol: offset >= 0 ? p.baseSymbol : p.quoteSymbol,
     quoteValue: 0,
+    baseFlow: 0,
     feeAmount: 0,
     quoteValueWithFee: 0,
     cumulativeFlow: 0,
+    cumulativeBaseFlow: 0,
     multiple: priceAt(p, offset) / p.initialPrice,
   };
 }
@@ -154,6 +161,7 @@ function addToPoint(map, p, offset, patch) {
   point.binFlow += patch.binFlow ?? 0;
   point.tokenAmount += patch.tokenAmount ?? 0;
   point.quoteValue += patch.quoteValue ?? 0;
+  point.baseFlow += patch.baseFlow ?? 0;
   point.feeAmount += patch.feeAmount ?? 0;
   point.quoteValueWithFee += patch.quoteValueWithFee ?? 0;
 }
@@ -182,6 +190,7 @@ function buildLayerPoints(p, config, map) {
       binFlow: -quoteInBin,
       tokenAmount: quoteInBin,
       quoteValue: quoteInBin,
+      baseFlow: priceAt(p, offset) > 0 ? quoteInBin / priceAt(p, offset) : 0,
       quoteValueWithFee: quoteInBin,
     });
   }
@@ -199,6 +208,7 @@ function buildLayerPoints(p, config, map) {
       binFlow: quoteValue,
       tokenAmount: baseInBin,
       quoteValue,
+      baseFlow: baseInBin,
       feeAmount: fee,
       quoteValueWithFee: quoteValue + fee,
     });
@@ -223,6 +233,7 @@ function buildPoints(p) {
     if (point) {
       runningSell += point.binFlow;
       point.cumulativeFlow = runningSell;
+      point.cumulativeBaseFlow = (map.get(offset + 1)?.cumulativeBaseFlow ?? 0) + point.baseFlow;
     }
   }
   let runningBuy = 0;
@@ -231,6 +242,7 @@ function buildPoints(p) {
     if (point) {
       runningBuy += point.quoteValue;
       point.cumulativeFlow = runningBuy;
+      point.cumulativeBaseFlow = (map.get(offset - 1)?.cumulativeBaseFlow ?? 0) + point.baseFlow;
     }
   }
   return out;
@@ -264,28 +276,118 @@ function fmtPriceUsd(price, p) {
   return `${fmtUsd(price, p)} / ${p.baseSymbol}`;
 }
 
-function findScenarioPoint(p) {
-  const targetQuote = scenarioUnit === "usd" ? p.scenarioAmount / p.quoteUsd : p.scenarioAmount;
-  if (targetQuote === 0) return points.find((point) => point.offset === 0);
-  if (targetQuote > 0) {
-    return points.find((point) => point.offset > 0 && point.cumulativeFlow >= targetQuote) ?? points.at(-1);
+function priceInputToQuote(value, p) {
+  return priceUnit === "usd" ? value / p.quoteUsd : value;
+}
+
+function nearestPointByPrice(price) {
+  const offset = Math.round(Math.log(price / globalParams().initialPrice) / Math.log(globalParams().ratio));
+  return pointAtOffset(offset);
+}
+
+function pointAtOffset(offset) {
+  if (offset <= points[0].offset) return points[0];
+  if (offset >= points.at(-1).offset) return points.at(-1);
+  return points.find((point) => point.offset >= offset) ?? points.at(-1);
+}
+
+function quoteFlowBetween(fromPoint, toPoint) {
+  return Math.max(0, toPoint.cumulativeFlow - fromPoint.cumulativeFlow);
+}
+
+function baseFlowBetween(fromPoint, toPoint) {
+  if (toPoint.offset >= fromPoint.offset) return 0;
+  let total = 0;
+  for (let offset = fromPoint.offset - 1; offset >= toPoint.offset; offset -= 1) {
+    total += pointAtOffset(offset).baseFlow;
   }
-  return [...points].reverse().find((point) => point.offset < 0 && point.cumulativeFlow <= targetQuote) ?? points[0];
+  return total;
+}
+
+function targetFromQuoteFlow(fromPoint, quoteAmount) {
+  for (const point of points) {
+    if (point.offset <= fromPoint.offset) continue;
+    if (quoteFlowBetween(fromPoint, point) >= quoteAmount) return point;
+  }
+  return points.at(-1);
+}
+
+function targetFromBaseFlow(fromPoint, baseAmount) {
+  let total = 0;
+  for (let offset = fromPoint.offset - 1; offset >= points[0].offset; offset -= 1) {
+    const point = pointAtOffset(offset);
+    total += point.baseFlow;
+    if (total >= baseAmount) return point;
+  }
+  return points[0];
+}
+
+function updateSimulatorControls(p) {
+  const isAmountMode = simulationMode === "amount";
+  const isBuy = tradeSide === "buy";
+  document.querySelectorAll(".amount-mode-field").forEach((item) => {
+    item.hidden = !isAmountMode;
+  });
+  document.querySelectorAll(".target-mode-field").forEach((item) => {
+    item.hidden = isAmountMode;
+  });
+  $("scenarioAmountUnitWrap").hidden = !isAmountMode || !isBuy;
+  $("scenarioAmountLabel").textContent = isBuy ? "流入资金" : "流出 Base";
+  $("scenarioAmountHint").textContent = isBuy ? `U 或 ${p.quoteSymbol}` : p.baseSymbol;
+  $("scenarioCurrentHint").textContent = priceUnit === "usd" ? `U / ${p.baseSymbol}` : `${p.quoteSymbol} / ${p.baseSymbol}`;
+  $("scenarioTargetHint").textContent = priceUnit === "usd" ? `U / ${p.baseSymbol}` : `${p.quoteSymbol} / ${p.baseSymbol}`;
+  $("pricePairHint").textContent = `${p.quoteSymbol} / ${p.baseSymbol}`;
+  $("priceQuoteUnitLabel").textContent = p.quoteSymbol;
+  $("amountQuoteUnitLabel").textContent = p.quoteSymbol;
 }
 
 function updateScenario(p) {
-  const targetQuote = scenarioUnit === "usd" ? p.scenarioAmount / p.quoteUsd : p.scenarioAmount;
-  const point = findScenarioPoint(p) ?? points.find((item) => item.offset === 0);
-  $("scenarioPrice").textContent = `${fmtPrice(point.price)} ${p.quoteSymbol}`;
-  $("scenarioPriceUsd").textContent = fmtPriceUsd(point.price, p);
-  $("scenarioBin").textContent = String(point.offset);
-  $("scenarioFlow").textContent = `${fmtQuote(point.cumulativeFlow, p)} / ${fmtUsd(point.cumulativeFlow, p)}`;
-  $("scenarioMultiple").textContent = `${point.multiple.toLocaleString(undefined, { maximumFractionDigits: 2 })}x`;
+  updateSimulatorControls(p);
+  const currentInputPrice = Math.max(num(inputs.scenarioCurrentPrice, p.initialPrice * p.quoteUsd), 1e-12);
+  const currentQuotePrice = priceInputToQuote(currentInputPrice, p);
+  const currentPoint = nearestPointByPrice(currentQuotePrice) ?? points.find((item) => item.offset === 0);
+  let targetPoint = currentPoint;
+  let quoteFlow = 0;
+  let baseFlow = 0;
+
+  if (simulationMode === "amount") {
+    const rawAmount = Math.max(num(inputs.scenarioAmount, 0), 0);
+    if (tradeSide === "buy") {
+      quoteFlow = amountUnit === "usd" ? rawAmount / p.quoteUsd : rawAmount;
+      targetPoint = targetFromQuoteFlow(currentPoint, quoteFlow);
+      baseFlow = Math.max(0, targetPoint.cumulativeBaseFlow - currentPoint.cumulativeBaseFlow);
+    } else {
+      baseFlow = rawAmount;
+      targetPoint = targetFromBaseFlow(currentPoint, baseFlow);
+      quoteFlow = Math.abs(targetPoint.cumulativeFlow - currentPoint.cumulativeFlow);
+    }
+  } else {
+    const targetInputPrice = Math.max(num(inputs.scenarioTargetPrice, currentInputPrice), 1e-12);
+    const targetQuotePrice = priceInputToQuote(targetInputPrice, p);
+    targetPoint = nearestPointByPrice(targetQuotePrice) ?? currentPoint;
+    tradeSide = targetPoint.offset >= currentPoint.offset ? "buy" : "sell";
+    document.querySelectorAll(".trade-side").forEach((button) => {
+      button.classList.toggle("active", button.dataset.side === tradeSide);
+    });
+    if (tradeSide === "buy") {
+      quoteFlow = quoteFlowBetween(currentPoint, targetPoint);
+      baseFlow = Math.max(0, targetPoint.cumulativeBaseFlow - currentPoint.cumulativeBaseFlow);
+    } else {
+      baseFlow = baseFlowBetween(currentPoint, targetPoint);
+      quoteFlow = Math.abs(targetPoint.cumulativeFlow - currentPoint.cumulativeFlow);
+    }
+  }
+
+  $("scenarioPrice").textContent = `${fmtPrice(targetPoint.price)} ${p.quoteSymbol}`;
+  $("scenarioPriceUsd").textContent = fmtPriceUsd(targetPoint.price, p);
+  $("scenarioBin").textContent = String(targetPoint.offset);
+  $("scenarioFlow").textContent = tradeSide === "buy"
+    ? `${fmtQuote(quoteFlow, p)} / ${fmtUsd(quoteFlow, p)}`
+    : `${fmtToken(baseFlow, p.baseSymbol)} -> ${fmtQuote(quoteFlow, p)}`;
+  $("scenarioMultiple").textContent = `${(targetPoint.price / currentPoint.price).toLocaleString(undefined, { maximumFractionDigits: 2 })}x`;
   $("derivedBidBins").textContent = String(Math.max(0, -points[0].offset));
   $("derivedAskBins").textContent = String(Math.max(0, points.at(-1).offset));
-  $("pricePairHint").textContent = `${p.quoteSymbol} / ${p.baseSymbol}`;
-  $("quoteUnitLabel").textContent = p.quoteSymbol;
-  if (targetQuote !== 0) hoverPoint = point;
+  hoverPoint = targetPoint;
 }
 
 function resizeCanvas() {
@@ -526,11 +628,38 @@ document.querySelectorAll(".segment").forEach((button) => {
   });
 });
 
-document.querySelectorAll(".unit").forEach((button) => {
+document.querySelectorAll(".sim-mode").forEach((button) => {
   button.addEventListener("click", () => {
-    document.querySelectorAll(".unit").forEach((item) => item.classList.remove("active"));
+    document.querySelectorAll(".sim-mode").forEach((item) => item.classList.remove("active"));
     button.classList.add("active");
-    scenarioUnit = button.dataset.unit === "quote" ? "quote" : "usd";
+    simulationMode = button.dataset.simMode === "target" ? "target" : "amount";
+    recalc();
+  });
+});
+
+document.querySelectorAll(".trade-side").forEach((button) => {
+  button.addEventListener("click", () => {
+    document.querySelectorAll(".trade-side").forEach((item) => item.classList.remove("active"));
+    button.classList.add("active");
+    tradeSide = button.dataset.side === "sell" ? "sell" : "buy";
+    recalc();
+  });
+});
+
+document.querySelectorAll(".price-unit").forEach((button) => {
+  button.addEventListener("click", () => {
+    document.querySelectorAll(".price-unit").forEach((item) => item.classList.remove("active"));
+    button.classList.add("active");
+    priceUnit = button.dataset.priceUnit === "quote" ? "quote" : "usd";
+    recalc();
+  });
+});
+
+document.querySelectorAll(".amount-unit").forEach((button) => {
+  button.addEventListener("click", () => {
+    document.querySelectorAll(".amount-unit").forEach((item) => item.classList.remove("active"));
+    button.classList.add("active");
+    amountUnit = button.dataset.amountUnit === "quote" ? "quote" : "usd";
     recalc();
   });
 });

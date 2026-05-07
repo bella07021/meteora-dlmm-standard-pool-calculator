@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Meteora DLMM Standard Pool 计算器</title>
-    <link rel="stylesheet" href="styles.css?v=20260505" />
+    <link rel="stylesheet" href="styles.css?v=20260507-simulator" />
   </head>
   <body>
     <main class="app-shell">
@@ -97,15 +97,57 @@
           </table>
         </div>
 
-        <div class="scenario">
-          <label>
-            <span>模拟资金</span>
-            <input id="scenarioAmount" type="number" step="100" value="50000" />
-          </label>
-          <div class="segmented compact" role="radiogroup" aria-label="资金单位">
-            <button class="unit active" data-unit="usd" type="button">U</button>
-            <button class="unit" data-unit="quote" type="button" id="quoteUnitLabel">QUOTE</button>
+      </section>
+
+      <section class="panel simulator" aria-label="交易模拟">
+        <div class="section-head">
+          <div>
+            <h2>交易模拟</h2>
+            <p>基于上方已添加的整体流动性，从当前价格推目标价，或从目标价反推需要的资金。</p>
           </div>
+          <div class="segmented compact" role="radiogroup" aria-label="模拟方式">
+            <button class="sim-mode active" data-sim-mode="amount" type="button">资金 → 价格</button>
+            <button class="sim-mode" data-sim-mode="target" type="button">价格 → 资金</button>
+          </div>
+        </div>
+
+        <div class="sim-grid">
+          <label>
+            <span>当前价格</span>
+            <input id="scenarioCurrentPrice" type="number" step="0.000000001" value="0.1" />
+            <small id="scenarioCurrentHint">U / FAIRA</small>
+          </label>
+          <div class="field-with-control">
+            <span>价格单位</span>
+            <div class="segmented compact" role="radiogroup" aria-label="当前价格单位">
+              <button class="price-unit active" data-price-unit="usd" type="button">U</button>
+              <button class="price-unit" data-price-unit="quote" type="button" id="priceQuoteUnitLabel">QUOTE</button>
+            </div>
+          </div>
+          <div class="field-with-control">
+            <span>方向</span>
+            <div class="segmented compact" role="radiogroup" aria-label="交易方向">
+              <button class="trade-side active" data-side="buy" type="button">流入买入</button>
+              <button class="trade-side" data-side="sell" type="button">流出卖出</button>
+            </div>
+          </div>
+          <label class="amount-mode-field">
+            <span id="scenarioAmountLabel">流入资金</span>
+            <input id="scenarioAmount" type="number" step="100" value="50000" />
+            <small id="scenarioAmountHint">U 或 Quote</small>
+          </label>
+          <div class="field-with-control amount-mode-field" id="scenarioAmountUnitWrap">
+            <span>资金单位</span>
+            <div class="segmented compact" role="radiogroup" aria-label="资金单位">
+              <button class="amount-unit active" data-amount-unit="usd" type="button">U</button>
+              <button class="amount-unit" data-amount-unit="quote" type="button" id="amountQuoteUnitLabel">QUOTE</button>
+            </div>
+          </div>
+          <label class="target-mode-field">
+            <span>目标价</span>
+            <input id="scenarioTargetPrice" type="number" step="0.000000001" value="0.15" />
+            <small id="scenarioTargetHint">U / FAIRA</small>
+          </label>
         </div>
       </section>
 
@@ -120,7 +162,7 @@
           <strong id="scenarioBin">-</strong>
         </div>
         <div>
-          <span>累计 Quote 流</span>
+          <span>资金变化</span>
           <strong id="scenarioFlow">-</strong>
         </div>
         <div>
@@ -184,6 +226,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=20260505-rangefix"></script>
+    <script src="app.js?v=20260507-simulator"></script>
   </body>
 </html>
