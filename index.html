@@ -4,17 +4,48 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Meteora DLMM Standard Pool 计算器</title>
-    <link rel="stylesheet" href="styles.css?v=20260513-projects" />
+    <link rel="stylesheet" href="styles.css?v=20260513-structure" />
   </head>
   <body>
     <main class="app-shell">
-      <section class="panel controls" aria-label="参数设置">
-        <div class="title-block">
-          <p class="eyebrow">DLMM / Bin Model</p>
-          <h1>Meteora DLMM Standard Pool 计算器</h1>
+      <header class="app-title">
+        <h1>Meteora DLMM Standard Pool 计算器</h1>
+      </header>
+
+      <section class="panel project-panel" aria-label="选择项目数据">
+        <div class="section-head">
+          <div>
+            <h2>选择项目数据</h2>
+            <p>从远端项目库加载共享数据，或将当前参数和流动性列表保存为项目。</p>
+          </div>
         </div>
 
-        <div class="step-title">1. 选择 Token / Quote</div>
+        <div class="project-actions" aria-label="保存和加载项目">
+          <label class="project-name-field">
+            <span>项目名称</span>
+            <input id="projectName" type="text" placeholder="例如 FAIRA-SOL 0513" />
+          </label>
+          <button id="saveProject" class="secondary-action" type="button">保存当前项目</button>
+          <label class="project-select-field">
+            <span>已保存项目</span>
+            <select id="savedProjects">
+              <option value="">暂无保存项目</option>
+            </select>
+          </label>
+          <button id="loadProject" class="secondary-action" type="button">加载项目</button>
+        </div>
+        <p class="project-hint" id="projectHint">保存会记录当前参数和流动性列表；同名项目会覆盖。</p>
+      </section>
+
+      <section class="panel controls" aria-label="参数设置">
+        <div class="section-head">
+          <div>
+            <h2>开盘信息和流动性添加</h2>
+            <p>开盘价和流动性区间按 Quote/Base 计算；当前 Quote 价格只用于 U 折算和交易模拟里的 U 输入。</p>
+          </div>
+        </div>
+
+        <div class="step-title">开盘信息</div>
         <div class="grid">
           <label>
             <span>Base Token</span>
@@ -27,9 +58,14 @@
             <small>例如 SOL</small>
           </label>
           <label>
-            <span>Quote 价格</span>
+            <span>开盘 Quote 价格</span>
             <input id="quoteUsd" type="number" step="0.01" value="84" />
-            <small>U / Quote</small>
+            <small>仅用于记录开盘时 U 价格</small>
+          </label>
+          <label>
+            <span>当前 Quote 价格</span>
+            <input id="currentQuoteUsd" type="number" step="0.01" value="84" />
+            <small>用于 U 折算和交易模拟</small>
           </label>
           <label>
             <span>开盘价</span>
@@ -48,7 +84,7 @@
           </label>
         </div>
 
-        <div class="step-title">2. 添加流动性</div>
+        <div class="step-title">添加流动性</div>
         <div class="grid">
           <label>
             <span>Base Token Amount</span>
@@ -84,23 +120,7 @@
             <input id="liquidityUpload" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
           </label>
         </div>
-        <p class="upload-hint" id="uploadHint">Excel 第一张表表头：模式、base、quote、min、max；Bins 会按当前开盘价和 Bin Step 自动计算。</p>
-
-        <div class="project-actions" aria-label="保存和加载项目">
-          <label class="project-name-field">
-            <span>项目名称</span>
-            <input id="projectName" type="text" placeholder="例如 FAIRA-SOL 0513" />
-          </label>
-          <button id="saveProject" class="secondary-action" type="button">保存当前项目</button>
-          <label class="project-select-field">
-            <span>已保存项目</span>
-            <select id="savedProjects">
-              <option value="">暂无保存项目</option>
-            </select>
-          </label>
-          <button id="loadProject" class="secondary-action" type="button">加载项目</button>
-        </div>
-        <p class="project-hint" id="projectHint">保存会记录当前参数和流动性列表；同名项目会覆盖。</p>
+        <p class="upload-hint" id="uploadHint">Excel 第一张表表头：模式、base、quote、min、max；Bins 会按开盘价和 Bin Step 自动计算。</p>
 
         <div class="liquidity-table-wrap">
           <table class="liquidity-table">
@@ -206,7 +226,7 @@
       <section class="chart-wrap" aria-label="交互图表">
         <div class="chart-head">
           <div>
-            <h2>Hover 任意价格 bin 查看深度</h2>
+            <h2>池子深度图</h2>
             <p>每根柱子对应一个 bin；上方是买入上行消耗的 SOL，下方是卖出下行流出的 SOL。</p>
           </div>
           <div class="legend">
@@ -234,6 +254,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=20260513-projects"></script>
+    <script src="app.js?v=20260513-structure"></script>
   </body>
 </html>

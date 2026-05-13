@@ -4,6 +4,7 @@ const inputs = {
   baseSymbol: $("baseSymbol"),
   quoteSymbol: $("quoteSymbol"),
   quoteUsd: $("quoteUsd"),
+  currentQuoteUsd: $("currentQuoteUsd"),
   initialPrice: $("initialPrice"),
   binStep: $("binStep"),
   feeBps: $("feeBps"),
@@ -58,7 +59,8 @@ function globalParams() {
   return {
     baseSymbol,
     quoteSymbol,
-    quoteUsd: Math.max(num(inputs.quoteUsd, 84), 0.0001),
+    quoteUsd: Math.max(num(inputs.currentQuoteUsd, num(inputs.quoteUsd, 84)), 0.0001),
+    openingQuoteUsd: Math.max(num(inputs.quoteUsd, 84), 0.0001),
     initialPrice,
     binStep,
     ratio,
@@ -367,6 +369,7 @@ function projectParamsSnapshot() {
     baseSymbol: inputs.baseSymbol.value,
     quoteSymbol: inputs.quoteSymbol.value,
     quoteUsd: inputs.quoteUsd.value,
+    currentQuoteUsd: inputs.currentQuoteUsd.value,
     initialPrice: inputs.initialPrice.value,
     binStep: inputs.binStep.value,
     feeBps: inputs.feeBps.value,
@@ -376,6 +379,9 @@ function projectParamsSnapshot() {
 function applyProjectParams(params = {}) {
   for (const [key, value] of Object.entries(params)) {
     if (inputs[key]) inputs[key].value = value;
+  }
+  if (params.quoteUsd && !params.currentQuoteUsd) {
+    inputs.currentQuoteUsd.value = params.quoteUsd;
   }
 }
 
