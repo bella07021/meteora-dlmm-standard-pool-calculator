@@ -19,6 +19,7 @@ const inputs = {
 const chart = $("chart");
 const ctx = chart.getContext("2d");
 const tooltip = $("tooltip");
+const PROJECTS_API = "/api/projects";
 
 let selectedMode = "bidAsk";
 let simulationMode = "amount";
@@ -27,6 +28,7 @@ let priceUnit = "usd";
 let amountUnit = "usd";
 let points = [];
 let hoverPoint = null;
+let savedProjectsCache = {};
 let liquidityConfigs = [
   {
     id: crypto.randomUUID(),
@@ -322,6 +324,320 @@ function targetFromBaseFlow(fromPoint, baseAmount) {
   return points[0];
 }
 
+function targetFromSellQuoteFlow(fromPoint, quoteAmount) {
+  for (let offset = fromPoint.offset - 1; offset >= points[0].offset; offset -= 1) {
+    const point = pointAtOffset(offset);
+    if (Math.abs(point.cumulativeFlow - fromPoint.cumulativeFlow) >= quoteAmount) return point;
+  }
+  return points[0];
+}
+
+function setUploadHint(message, isError = false) {
+  const hint = $("uploadHint");
+  hint.textContent = message;
+  hint.classList.toggle("upload-error", isError);
+}
+
+function setProjectHint(message, isError = false) {
+  const hint = $("projectHint");
+  hint.textContent = message;
+  hint.classList.toggle("project-error", isError);
+}
+
+async function requestProjects(options = {}) {
+  const response = await fetch(PROJECTS_API, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || "远端项目库请求失败。");
+  }
+  return payload.projects || {};
+}
+
+function projectParamsSnapshot() {
+  return {
+    baseSymbol: inputs.baseSymbol.value,
+    quoteSymbol: inputs.quoteSymbol.value,
+    quoteUsd: inputs.quoteUsd.value,
+    initialPrice: inputs.initialPrice.value,
+    binStep: inputs.binStep.value,
+    feeBps: inputs.feeBps.value,
+  };
+}
+
+function applyProjectParams(params = {}) {
+  for (const [key, value] of Object.entries(params)) {
+    if (inputs[key]) inputs[key].value = value;
+  }
+}
+
+function liquiditySnapshot() {
+  return liquidityConfigs.map(({ mode, baseAmount, quoteAmount, minPrice, maxPrice }) => ({
+    mode,
+    baseAmount,
+    quoteAmount,
+    minPrice,
+    maxPrice,
+  }));
+}
+
+function restoreLiquidity(configs = []) {
+  liquidityConfigs = configs.map((config) => ({
+    id: crypto.randomUUID(),
+    mode: normalizeMode(config.mode) || "bidAsk",
+    baseAmount: Math.max(Number(config.baseAmount) || 0, 0),
+    quoteAmount: Math.max(Number(config.quoteAmount) || 0, 0),
+    minPrice: Math.max(Number(config.minPrice) || 0, 1e-12),
+    maxPrice: Math.max(Number(config.maxPrice) || 0, 1e-12),
+  }));
+}
+
+function renderSavedProjectOptions(selectedName = $("savedProjects").value) {
+  const select = $("savedProjects");
+  const names = Object.keys(savedProjectsCache).sort((a, b) => a.localeCompare(b));
+  select.innerHTML = "";
+  if (names.length === 0) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "暂无保存项目";
+    select.append(option);
+  } else {
+    names.forEach((name) => {
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = name;
+      select.append(option);
+    });
+  }
+  if (names.includes(selectedName)) select.value = selectedName;
+}
+
+async function refreshSavedProjects(selectedName = $("savedProjects").value) {
+  savedProjectsCache = await requestProjects();
+  renderSavedProjectOptions(selectedName);
+}
+
+async function saveCurrentProject() {
+  const name = $("projectName").value.trim();
+  if (!name) {
+    setProjectHint("请先填写项目名称。", true);
+    return;
+  }
+  try {
+    const project = {
+      name,
+      savedAt: new Date().toISOString(),
+      params: projectParamsSnapshot(),
+      liquidity: liquiditySnapshot(),
+    };
+    savedProjectsCache = await requestProjects({
+      method: "POST",
+      body: JSON.stringify({ name, project }),
+    });
+    renderSavedProjectOptions(name);
+    $("savedProjects").value = name;
+    setProjectHint(`已保存到远端项目库：${name}（${liquidityConfigs.length} 行流动性）。`);
+  } catch (error) {
+    setProjectHint(error.message || "保存到远端项目库失败。", true);
+  }
+}
+
+function loadSelectedProject() {
+  const name = $("savedProjects").value;
+  if (!name) {
+    setProjectHint("请选择一个已保存项目。", true);
+    return;
+  }
+  const project = savedProjectsCache[name];
+  if (!project) {
+    renderSavedProjectOptions();
+    setProjectHint("没有找到这个项目，列表已刷新。", true);
+    return;
+  }
+  applyProjectParams(project.params);
+  restoreLiquidity(project.liquidity);
+  $("projectName").value = name;
+  recalc();
+  setProjectHint(`已加载项目：${name}（${liquidityConfigs.length} 行流动性）。`);
+}
+
+function normalizeMode(value) {
+  const textValue = String(value ?? "").trim().toLowerCase().replace(/[\s_-]+/g, "");
+  if (textValue === "spot") return "spot";
+  if (textValue === "curve") return "curve";
+  if (textValue === "bidask" || textValue === "bidasks" || textValue === "bid/ask") return "bidAsk";
+  return "";
+}
+
+function parseSheetNumber(value) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : NaN;
+  const cleaned = String(value ?? "").trim().replace(/,/g, "");
+  if (!cleaned) return NaN;
+  const parsed = Number(cleaned);
+  return Number.isFinite(parsed) ? parsed : NaN;
+}
+
+function normalizeHeader(value) {
+  return String(value ?? "").trim().toLowerCase().replace(/\s+/g, "");
+}
+
+function columnIndex(cellRef) {
+  const letters = String(cellRef || "").match(/[A-Z]+/i)?.[0] ?? "";
+  let index = 0;
+  for (const letter of letters.toUpperCase()) {
+    index = index * 26 + letter.charCodeAt(0) - 64;
+  }
+  return Math.max(0, index - 1);
+}
+
+async function inflateZipEntry(bytes) {
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+async function readZipEntries(buffer) {
+  const view = new DataView(buffer);
+  const bytes = new Uint8Array(buffer);
+  let eocd = -1;
+  for (let offset = bytes.length - 22; offset >= Math.max(0, bytes.length - 66000); offset -= 1) {
+    if (view.getUint32(offset, true) === 0x06054b50) {
+      eocd = offset;
+      break;
+    }
+  }
+  if (eocd < 0) throw new Error("没有识别到有效的 .xlsx 文件。");
+
+  const entryCount = view.getUint16(eocd + 10, true);
+  const centralDirOffset = view.getUint32(eocd + 16, true);
+  const decoder = new TextDecoder();
+  const entries = new Map();
+  let cursor = centralDirOffset;
+
+  for (let i = 0; i < entryCount; i += 1) {
+    if (view.getUint32(cursor, true) !== 0x02014b50) throw new Error("Excel 压缩结构读取失败。");
+    const compression = view.getUint16(cursor + 10, true);
+    const compressedSize = view.getUint32(cursor + 20, true);
+    const fileNameLength = view.getUint16(cursor + 28, true);
+    const extraLength = view.getUint16(cursor + 30, true);
+    const commentLength = view.getUint16(cursor + 32, true);
+    const localOffset = view.getUint32(cursor + 42, true);
+    const fileName = decoder.decode(bytes.slice(cursor + 46, cursor + 46 + fileNameLength));
+    entries.set(fileName, { compression, compressedSize, localOffset });
+    cursor += 46 + fileNameLength + extraLength + commentLength;
+  }
+
+  const files = new Map();
+  for (const [fileName, entry] of entries) {
+    if (view.getUint32(entry.localOffset, true) !== 0x04034b50) continue;
+    const fileNameLength = view.getUint16(entry.localOffset + 26, true);
+    const extraLength = view.getUint16(entry.localOffset + 28, true);
+    const dataStart = entry.localOffset + 30 + fileNameLength + extraLength;
+    const compressed = bytes.slice(dataStart, dataStart + entry.compressedSize);
+    if (entry.compression === 0) files.set(fileName, compressed);
+    if (entry.compression === 8) files.set(fileName, await inflateZipEntry(compressed));
+  }
+  return files;
+}
+
+function parseXml(bytes) {
+  const xml = new TextDecoder().decode(bytes);
+  const doc = new DOMParser().parseFromString(xml, "application/xml");
+  if (doc.querySelector("parsererror")) throw new Error("Excel XML 内容解析失败。");
+  return doc;
+}
+
+function resolveWorkbookPath(workbookDoc, relsDoc) {
+  const firstSheet = workbookDoc.querySelector("sheet");
+  const relId = firstSheet?.getAttribute("r:id");
+  if (!relId) throw new Error("Excel 第一张表不存在。");
+  const rel = [...relsDoc.querySelectorAll("Relationship")].find((item) => item.getAttribute("Id") === relId);
+  const target = rel?.getAttribute("Target");
+  if (!target) throw new Error("Excel 工作表关系读取失败。");
+  return target.startsWith("/") ? target.slice(1) : `xl/${target}`.replace(/\/[^/]+\/\.\.\//g, "/");
+}
+
+function readSharedStrings(files) {
+  const bytes = files.get("xl/sharedStrings.xml");
+  if (!bytes) return [];
+  const doc = parseXml(bytes);
+  return [...doc.querySelectorAll("si")].map((item) =>
+    [...item.querySelectorAll("t")].map((node) => node.textContent ?? "").join("")
+  );
+}
+
+function cellValue(cell, sharedStrings) {
+  const type = cell.getAttribute("t");
+  if (type === "inlineStr") return [...cell.querySelectorAll("t")].map((node) => node.textContent ?? "").join("");
+  const value = cell.querySelector("v")?.textContent ?? "";
+  if (type === "s") return sharedStrings[Number(value)] ?? "";
+  return value;
+}
+
+function rowsFromWorksheet(sheetDoc, sharedStrings) {
+  return [...sheetDoc.querySelectorAll("sheetData row")].map((row) => {
+    const values = [];
+    row.querySelectorAll("c").forEach((cell) => {
+      values[columnIndex(cell.getAttribute("r"))] = cellValue(cell, sharedStrings);
+    });
+    return values.map((value) => value ?? "");
+  });
+}
+
+function configsFromRows(rows) {
+  const headerIndex = rows.findIndex((row) => row.some((cell) => normalizeHeader(cell)));
+  if (headerIndex < 0) throw new Error("Excel 没有找到表头。");
+  const headerMap = new Map(rows[headerIndex].map((cell, index) => [normalizeHeader(cell), index]));
+  const columns = {
+    mode: headerMap.get("模式") ?? headerMap.get("mode"),
+    base: headerMap.get("base"),
+    quote: headerMap.get("quote"),
+    min: headerMap.get("min"),
+    max: headerMap.get("max"),
+  };
+  if (Object.values(columns).some((index) => index === undefined)) {
+    throw new Error("表头需要包含：模式、base、quote、min、max。");
+  }
+
+  const configs = [];
+  rows.slice(headerIndex + 1).forEach((row, index) => {
+    if (!row.some((cell) => String(cell ?? "").trim())) return;
+    const mode = normalizeMode(row[columns.mode]);
+    const baseAmount = parseSheetNumber(row[columns.base]);
+    const quoteAmount = parseSheetNumber(row[columns.quote]);
+    const minPrice = parseSheetNumber(row[columns.min]);
+    const maxPrice = parseSheetNumber(row[columns.max]);
+    if (!mode || [baseAmount, quoteAmount, minPrice, maxPrice].some((value) => !Number.isFinite(value))) {
+      throw new Error(`第 ${headerIndex + index + 2} 行格式不完整，请检查模式/base/quote/min/max。`);
+    }
+    configs.push({
+      id: crypto.randomUUID(),
+      mode,
+      baseAmount: Math.max(baseAmount, 0),
+      quoteAmount: Math.max(quoteAmount, 0),
+      minPrice: Math.max(minPrice, 1e-12),
+      maxPrice: Math.max(maxPrice, 1e-12),
+    });
+  });
+  return configs;
+}
+
+async function readLiquidityXlsx(file) {
+  if (!file.name.toLowerCase().endsWith(".xlsx")) throw new Error("请上传 .xlsx 格式的 Excel 文件。");
+  if (!("DecompressionStream" in window)) throw new Error("当前浏览器不支持直接解析 .xlsx，请换新版 Chrome。");
+  const files = await readZipEntries(await file.arrayBuffer());
+  const workbookDoc = parseXml(files.get("xl/workbook.xml"));
+  const relsDoc = parseXml(files.get("xl/_rels/workbook.xml.rels"));
+  const sheetPath = resolveWorkbookPath(workbookDoc, relsDoc);
+  const sheetBytes = files.get(sheetPath);
+  if (!sheetBytes) throw new Error("没有读取到第一张工作表。");
+  return configsFromRows(rowsFromWorksheet(parseXml(sheetBytes), readSharedStrings(files)));
+}
+
 function updateSimulatorControls(p) {
   const isAmountMode = simulationMode === "amount";
   const isBuy = tradeSide === "buy";
@@ -331,9 +647,9 @@ function updateSimulatorControls(p) {
   document.querySelectorAll(".target-mode-field").forEach((item) => {
     item.hidden = isAmountMode;
   });
-  $("scenarioAmountUnitWrap").hidden = !isAmountMode || !isBuy;
-  $("scenarioAmountLabel").textContent = isBuy ? "流入资金" : "流出 Base";
-  $("scenarioAmountHint").textContent = isBuy ? `U 或 ${p.quoteSymbol}` : p.baseSymbol;
+  $("scenarioAmountUnitWrap").hidden = !isAmountMode;
+  $("scenarioAmountLabel").textContent = isBuy ? "流入资金" : "流出资金";
+  $("scenarioAmountHint").textContent = `U 或 ${p.quoteSymbol}`;
   $("scenarioCurrentHint").textContent = priceUnit === "usd" ? `U / ${p.baseSymbol}` : `${p.quoteSymbol} / ${p.baseSymbol}`;
   $("scenarioTargetHint").textContent = priceUnit === "usd" ? `U / ${p.baseSymbol}` : `${p.quoteSymbol} / ${p.baseSymbol}`;
   $("pricePairHint").textContent = `${p.quoteSymbol} / ${p.baseSymbol}`;
@@ -363,9 +679,10 @@ function updateScenario(p) {
       targetPoint = targetFromQuoteFlow(currentPoint, quoteFlow);
       baseFlow = Math.max(0, targetPoint.cumulativeBaseFlow - currentPoint.cumulativeBaseFlow);
     } else {
-      baseFlow = rawAmount;
-      targetPoint = targetFromBaseFlow(currentPoint, baseFlow);
+      quoteFlow = amountUnit === "usd" ? rawAmount / p.quoteUsd : rawAmount;
+      targetPoint = targetFromSellQuoteFlow(currentPoint, quoteFlow);
       quoteFlow = Math.abs(targetPoint.cumulativeFlow - currentPoint.cumulativeFlow);
+      baseFlow = baseFlowBetween(currentPoint, targetPoint);
     }
   } else {
     const targetInputPrice = Math.max(num(inputs.scenarioTargetPrice, currentInputPrice), 1e-12);
@@ -386,16 +703,18 @@ function updateScenario(p) {
 
   $("scenarioPrice").textContent = `${fmtPrice(targetPoint.price)} ${p.quoteSymbol}`;
   $("scenarioPriceUsd").textContent = fmtPriceUsd(targetPoint.price, p);
-  $("scenarioBin").textContent = String(targetPoint.offset);
-  $("scenarioFlow").textContent = tradeSide === "buy"
-    ? `${fmtQuote(quoteFlow, p)} / ${fmtUsd(quoteFlow, p)}`
-    : `${fmtToken(baseFlow, p.baseSymbol)} -> ${fmtQuote(quoteFlow, p)}`;
-  $("scenarioMultiple").textContent = `${(targetPoint.price / currentPoint.price).toLocaleString(undefined, { maximumFractionDigits: 2 })}x`;
-  $("derivedBidBins").textContent = String(Math.max(0, -points[0].offset));
-  $("derivedAskBins").textContent = String(Math.max(0, points.at(-1).offset));
+  $("scenarioFlowLabel").textContent = `资金变化（${p.quoteSymbol} + U）`;
+  $("scenarioFlow").textContent = `${fmtQuote(quoteFlow, p)} / ${fmtUsd(quoteFlow, p)}`;
+  $("scenarioTradeLabel").textContent = tradeSide === "buy"
+    ? `买入（${p.baseSymbol}）`
+    : `卖出（${p.quoteSymbol} + U）`;
+  $("scenarioTrade").textContent = tradeSide === "buy"
+    ? fmtToken(baseFlow, p.baseSymbol)
+    : `${fmtQuote(quoteFlow, p)} / ${fmtUsd(quoteFlow, p)}`;
   setResultTone($("scenarioPrice"), targetPoint.price - currentPoint.price);
   setResultTone($("scenarioPriceUsd"), targetPoint.price - currentPoint.price);
-  setResultTone($("scenarioFlow"), tradeSide === "buy" ? quoteFlow : -baseFlow);
+  setResultTone($("scenarioFlow"), tradeSide === "buy" ? quoteFlow : -quoteFlow);
+  setResultTone($("scenarioTrade"), tradeSide === "buy" ? baseFlow : -quoteFlow);
   hoverPoint = targetPoint;
 }
 
@@ -686,6 +1005,30 @@ $("addLiquidity").addEventListener("click", () => {
   recalc();
 });
 
+$("liquidityUpload").addEventListener("change", async (event) => {
+  const [file] = event.target.files;
+  if (!file) return;
+  try {
+    setUploadHint("正在读取 Excel...");
+    const configs = await readLiquidityXlsx(file);
+    if (configs.length === 0) throw new Error("Excel 没有可导入的数据行。");
+    liquidityConfigs.push(...configs);
+    recalc();
+    setUploadHint(`已从 ${file.name} 导入 ${configs.length} 行。表头：模式、base、quote、min、max；Bins 自动计算。`);
+  } catch (error) {
+    setUploadHint(error.message || "Excel 导入失败，请检查文件格式。", true);
+  } finally {
+    event.target.value = "";
+  }
+});
+
+$("saveProject").addEventListener("click", saveCurrentProject);
+$("loadProject").addEventListener("click", loadSelectedProject);
+$("savedProjects").addEventListener("change", () => {
+  const name = $("savedProjects").value;
+  if (name) $("projectName").value = name;
+});
+
 chart.addEventListener("mousemove", (event) => {
   const p = globalParams();
   hoverPoint = nearestPoint(event.clientX);
@@ -700,4 +1043,10 @@ chart.addEventListener("mouseleave", () => {
 
 window.addEventListener("resize", draw);
 
+refreshSavedProjects()
+  .then(() => setProjectHint("已连接远端项目库，可保存和加载共享项目。"))
+  .catch((error) => {
+    renderSavedProjectOptions();
+    setProjectHint(error.message || "远端项目库未连接，项目保存暂不可用。", true);
+  });
 recalc();

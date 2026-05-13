@@ -35,7 +35,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -120,13 +121,14 @@ h2 {
 
 .sim-layout {
   display: grid;
-  gap: 14px;
+  gap: 16px;
+  padding: 4px 0 0;
 }
 
 .sim-row {
   display: grid;
   gap: 12px;
-  align-items: end;
+  align-items: start;
 }
 
 .sim-row-top {
@@ -134,15 +136,15 @@ h2 {
 }
 
 .sim-row-middle {
-  grid-template-columns: minmax(320px, 1.2fr) minmax(260px, 0.8fr);
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.42fr) minmax(220px, 0.34fr);
 }
 
 .sim-row-amount {
-  grid-template-columns: minmax(220px, 0.9fr) minmax(260px, 1.1fr) minmax(220px, 0.8fr);
+  grid-template-columns: minmax(260px, 0.74fr) minmax(0, 1fr) minmax(220px, 0.58fr);
 }
 
 .sim-row-target {
-  grid-template-columns: minmax(320px, 520px);
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.42fr) minmax(220px, 0.34fr);
 }
 
 .sim-cell {
@@ -152,6 +154,7 @@ h2 {
 .sim-cell .segmented,
 .sim-cell-mode .segmented {
   width: 100%;
+  height: 42px;
 }
 
 .step-title {
@@ -163,7 +166,8 @@ h2 {
 
 label {
   display: grid;
-  gap: 7px;
+  grid-template-rows: 18px 42px 16px;
+  gap: 6px;
   min-width: 0;
 }
 
@@ -172,14 +176,17 @@ label span,
   color: #d7dbea;
   font-size: 13px;
   font-weight: 700;
+  line-height: 18px;
 }
 
 label small {
   color: var(--muted);
   font-size: 12px;
+  line-height: 16px;
 }
 
-input {
+input,
+select {
   width: 100%;
   min-width: 0;
   height: 42px;
@@ -189,11 +196,22 @@ input {
   color: var(--text);
   padding: 0 12px;
   outline: none;
+  display: block;
 }
 
-input:focus {
+input:focus,
+select:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.18);
+}
+
+select {
+  appearance: none;
+  background:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%) right 14px center / 7px 7px no-repeat,
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%) right 9px center / 7px 7px no-repeat,
+    var(--panel-2);
+  padding-right: 34px;
 }
 
 .segmented {
@@ -212,7 +230,7 @@ input:focus {
 .trade-side,
 .price-unit,
 .amount-unit {
-  height: 34px;
+  height: 32px;
   border: 0;
   border-radius: 6px;
   padding: 0 14px;
@@ -247,13 +265,33 @@ input:focus {
 
 .field-with-control {
   display: grid;
-  gap: 7px;
+  grid-template-rows: 18px 42px 16px;
+  gap: 6px;
   min-width: 0;
 }
 
-.primary-action {
+.field-with-control::after {
+  content: "";
+  display: block;
+  height: 16px;
+}
+
+.liquidity-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.liquidity-actions .segmented {
+  margin-top: 0;
+}
+
+.primary-action,
+.secondary-action,
+.upload-action {
   height: 38px;
-  margin: 16px 0 0 12px;
   border: 0;
   border-radius: 6px;
   background: var(--accent);
@@ -261,6 +299,62 @@ input:focus {
   padding: 0 16px;
   font-weight: 800;
   cursor: pointer;
+}
+
+.secondary-action {
+  border: 1px solid var(--line);
+  background: #12141d;
+  color: var(--text);
+}
+
+.upload-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(56, 189, 248, 0.55);
+  background: rgba(56, 189, 248, 0.12);
+  color: #dff7ff;
+}
+
+.upload-action input {
+  display: none;
+}
+
+.upload-hint {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.upload-hint.upload-error {
+  color: #fecdd3;
+}
+
+.project-actions {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto minmax(220px, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.project-name-field,
+.project-select-field {
+  grid-template-rows: 18px 42px;
+}
+
+.project-hint {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.project-hint.project-error {
+  color: #fecdd3;
 }
 
 .liquidity-table-wrap {
@@ -310,6 +404,13 @@ input:focus {
   grid-template-columns: repeat(4, 1fr);
   gap: 1px;
   overflow: hidden;
+}
+
+.result-strip {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 2px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
 }
 
 .details {
@@ -471,6 +572,10 @@ canvas {
     grid-template-columns: 1fr;
   }
 
+  .project-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+
   .chart-head,
   .title-block,
   .section-head {
@@ -487,6 +592,10 @@ canvas {
   .grid,
   .result-strip,
   .details {
+    grid-template-columns: 1fr;
+  }
+
+  .project-actions {
     grid-template-columns: 1fr;
   }
 

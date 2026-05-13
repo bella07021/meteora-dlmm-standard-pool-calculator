@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/projects.js": {
+      "runtime": "nodejs20.x"
+    }
+  }
+}

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Meteora DLMM Standard Pool 计算器</title>
-    <link rel="stylesheet" href="styles.css?v=20260507-simulator" />
+    <link rel="stylesheet" href="styles.css?v=20260513-projects" />
   </head>
   <body>
     <main class="app-shell">
@@ -72,12 +72,35 @@
           </label>
         </div>
 
-        <div class="segmented" role="radiogroup" aria-label="流动性分布">
-          <button class="segment active" data-mode="bidAsk" type="button">Bid Ask</button>
-          <button class="segment" data-mode="spot" type="button">Spot</button>
-          <button class="segment" data-mode="curve" type="button">Curve</button>
+        <div class="liquidity-actions">
+          <div class="segmented" role="radiogroup" aria-label="流动性分布">
+            <button class="segment active" data-mode="bidAsk" type="button">Bid Ask</button>
+            <button class="segment" data-mode="spot" type="button">Spot</button>
+            <button class="segment" data-mode="curve" type="button">Curve</button>
+          </div>
+          <button id="addLiquidity" class="primary-action" type="button">添加流动性</button>
+          <label class="upload-action" for="liquidityUpload">
+            <span>上传 Excel</span>
+            <input id="liquidityUpload" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+          </label>
         </div>
-        <button id="addLiquidity" class="primary-action" type="button">添加流动性</button>
+        <p class="upload-hint" id="uploadHint">Excel 第一张表表头：模式、base、quote、min、max；Bins 会按当前开盘价和 Bin Step 自动计算。</p>
+
+        <div class="project-actions" aria-label="保存和加载项目">
+          <label class="project-name-field">
+            <span>项目名称</span>
+            <input id="projectName" type="text" placeholder="例如 FAIRA-SOL 0513" />
+          </label>
+          <button id="saveProject" class="secondary-action" type="button">保存当前项目</button>
+          <label class="project-select-field">
+            <span>已保存项目</span>
+            <select id="savedProjects">
+              <option value="">暂无保存项目</option>
+            </select>
+          </label>
+          <button id="loadProject" class="secondary-action" type="button">加载项目</button>
+        </div>
+        <p class="project-hint" id="projectHint">保存会记录当前参数和流动性列表；同名项目会覆盖。</p>
 
         <div class="liquidity-table-wrap">
           <table class="liquidity-table">
@@ -161,34 +184,22 @@
               <small id="scenarioTargetHint">U / FAIRA</small>
             </label>
           </div>
-        </div>
-      </section>
 
-      <section class="panel result-strip" aria-label="结果摘要">
-        <div>
-          <span>模拟后价格</span>
-          <strong id="scenarioPrice">-</strong>
-          <small id="scenarioPriceUsd">-</small>
-        </div>
-        <div>
-          <span>对应 Bin</span>
-          <strong id="scenarioBin">-</strong>
-        </div>
-        <div>
-          <span>资金变化</span>
-          <strong id="scenarioFlow">-</strong>
-        </div>
-        <div>
-          <span>价格倍数</span>
-          <strong id="scenarioMultiple">-</strong>
-        </div>
-        <div>
-          <span>左侧 Bins</span>
-          <strong id="derivedBidBins">-</strong>
-        </div>
-        <div>
-          <span>右侧 Bins</span>
-          <strong id="derivedAskBins">-</strong>
+          <div class="result-strip" aria-label="结果摘要">
+            <div>
+              <span>模拟后价格</span>
+              <strong id="scenarioPrice">-</strong>
+              <small id="scenarioPriceUsd">-</small>
+            </div>
+            <div>
+              <span id="scenarioFlowLabel">资金变化（Quote + U）</span>
+              <strong id="scenarioFlow">-</strong>
+            </div>
+            <div>
+              <span id="scenarioTradeLabel">买入（Base）</span>
+              <strong id="scenarioTrade">-</strong>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -239,6 +250,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=20260507-simulator"></script>
+    <script src="app.js?v=20260513-projects"></script>
   </body>
 </html>
