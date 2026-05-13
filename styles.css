@@ -414,7 +414,7 @@ select {
 }
 
 .details {
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .result-strip > div,
@@ -547,6 +547,10 @@ canvas {
   grid-template-columns: auto auto;
   gap: 5px 14px;
   margin: 0;
+}
+
+.tooltip-block + .tooltip-block {
+  margin-top: 12px;
 }
 
 .tooltip dt {

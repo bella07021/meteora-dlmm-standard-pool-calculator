@@ -275,7 +275,10 @@ function fmtUsd(value, p) {
 }
 
 function fmtPriceUsd(price, p) {
-  return `${fmtUsd(price, p)} / ${p.baseSymbol}`;
+  return `$${(price * p.quoteUsd).toLocaleString(undefined, {
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4,
+  })} / ${p.baseSymbol}`;
 }
 
 function priceInputToQuote(value, p) {
@@ -873,13 +876,9 @@ function drawMarker(point) {
 }
 
 function updateHoverDisplay(point, p) {
-  $("hoverBin").textContent = String(point.offset);
   $("hoverPrice").textContent = `${fmtPrice(point.price)} ${p.quoteSymbol}`;
   $("hoverPriceUsd").textContent = fmtPriceUsd(point.price, p);
   $("hoverFlow").textContent = `${fmtQuote(point.cumulativeFlow, p)} / ${fmtUsd(point.cumulativeFlow, p)}`;
-  $("hoverTokenAmount").textContent = fmtToken(point.tokenAmount, point.tokenSymbol);
-  $("hoverQuoteValue").textContent = `${fmtQuote(point.quoteValue, p)} / ${fmtUsd(point.quoteValue, p)}`;
-  $("hoverSide").textContent = point.side;
 }
 
 function nearestPoint(clientX) {
@@ -897,15 +896,14 @@ function showTooltip(point, event, p) {
   tooltip.style.top = `${event.clientY - rect.top}px`;
   tooltip.innerHTML = `
     <strong>Bin ${point.offset} · ${point.side}</strong>
-    <dl>
+    <dl class="tooltip-block">
       <dt>价格</dt><dd>${fmtPrice(point.price)} ${p.quoteSymbol}</dd>
       <dt>价格约合 U</dt><dd>${fmtPriceUsd(point.price, p)}</dd>
-      <dt>价格倍数</dt><dd>${point.multiple.toLocaleString(undefined, { maximumFractionDigits: 2 })}x</dd>
-      <dt>单 bin 代币量</dt><dd>${fmtToken(point.tokenAmount, point.tokenSymbol)}</dd>
-      <dt>Quote 价值</dt><dd>${fmtQuote(point.quoteValue, p)}</dd>
-      <dt>Quote 约合 U</dt><dd>${fmtUsd(point.quoteValue, p)}</dd>
-      <dt>Fee 估算</dt><dd>${fmtQuote(point.feeAmount, p)}</dd>
-      <dt>含 Fee Quote</dt><dd>${fmtQuote(point.quoteValueWithFee, p)}</dd>
+    </dl>
+    <dl class="tooltip-block">
+      <dt>单 bin 内代币量</dt><dd>${fmtToken(point.tokenAmount, point.tokenSymbol)}</dd>
+    </dl>
+    <dl class="tooltip-block">
       <dt>累计 ${p.quoteSymbol} 流</dt><dd>${fmtQuote(point.cumulativeFlow, p)}</dd>
       <dt>累计约合 U</dt><dd>${fmtUsd(point.cumulativeFlow, p)}</dd>
     </dl>
