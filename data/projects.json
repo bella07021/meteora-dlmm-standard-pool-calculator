@@ -1,1 +1,108 @@
-{}
+{
+  "FAIRA-SOL-260513-开盘版本": {
+    "name": "FAIRA-SOL-260513-开盘版本",
+    "savedAt": "2026-05-13T10:23:21.751Z",
+    "params": {
+      "baseSymbol": "FAIRA",
+      "quoteSymbol": "SOL",
+      "quoteUsd": "94",
+      "currentQuoteUsd": "94",
+      "initialPrice": "0.001072",
+      "binStep": "100",
+      "feeBps": "1"
+    },
+    "liquidity": [
+      {
+        "mode": "bidAsk",
+        "baseAmount": 25100,
+        "quoteAmount": 0,
+        "minPrice": 8.9269,
+        "maxPrice": 12.77
+      },
+      {
+        "mode": "bidAsk",
+        "baseAmount": 20000,
+        "quoteAmount": 0,
+        "minPrice": 5.4822,
+        "maxPrice": 8.9269
+      },
+      {
+        "mode": "bidAsk",
+        "baseAmount": 25000,
+        "quoteAmount": 0,
+        "minPrice": 2.9878,
+        "maxPrice": 5.4822
+      },
+      {
+        "mode": "bidAsk",
+        "baseAmount": 30000,
+        "quoteAmount": 0,
+        "minPrice": 1.9869,
+        "maxPrice": 2.9878
+      },
+      {
+        "mode": "spot",
+        "baseAmount": 24000,
+        "quoteAmount": 0,
+        "minPrice": 0.795442,
+        "maxPrice": 1.9869
+      },
+      {
+        "mode": "spot",
+        "baseAmount": 30000,
+        "quoteAmount": 0,
+        "minPrice": 0.498315,
+        "maxPrice": 0.795442
+      },
+      {
+        "mode": "spot",
+        "baseAmount": 50000,
+        "quoteAmount": 0,
+        "minPrice": 0.199497,
+        "maxPrice": 0.498315
+      },
+      {
+        "mode": "bidAsk",
+        "baseAmount": 20000,
+        "quoteAmount": 0,
+        "minPrice": 0.099413,
+        "maxPrice": 0.199497
+      },
+      {
+        "mode": "spot",
+        "baseAmount": 200000,
+        "quoteAmount": 0,
+        "minPrice": 0.0016,
+        "maxPrice": 0.010702
+      },
+      {
+        "mode": "bidAsk",
+        "baseAmount": 20000,
+        "quoteAmount": 0.002,
+        "minPrice": 0.001064,
+        "maxPrice": 0.099413
+      },
+      {
+        "mode": "bidAsk",
+        "baseAmount": 15900,
+        "quoteAmount": 2.5196,
+        "minPrice": 0.000714,
+        "maxPrice": 0.001584
+      },
+      {
+        "mode": "bidAsk",
+        "baseAmount": 0.369,
+        "quoteAmount": 320,
+        "minPrice": 0.0000119,
+        "maxPrice": 0.001064
+      },
+      {
+        "mode": "spot",
+        "baseAmount": 0,
+        "quoteAmount": 208,
+        "minPrice": 0.000011,
+        "maxPrice": 0.000535
+      }
+    ]
+  }
+}
