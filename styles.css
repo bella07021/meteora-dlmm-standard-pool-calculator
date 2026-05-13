@@ -139,6 +139,7 @@ h2 {
   align-items: start;
 }
 
+.sim-row-current-quote,
 .sim-row-top {
   grid-template-columns: minmax(360px, 520px);
 }
@@ -577,6 +578,7 @@ canvas {
   }
 
   .sim-row-top,
+  .sim-row-current-quote,
   .sim-row-middle,
   .sim-row-amount,
   .sim-row-target {
